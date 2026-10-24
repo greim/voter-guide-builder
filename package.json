@@ -1,0 +1,24 @@
+{
+  "name": "voter-guide-builder",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Turns an official ballot-measure booklet PDF into a browsable, printable HTML voter guide.",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "guide": "tsx src/cli.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.3.0",
+    "marked": "^18.1.1",
+    "mupdf": "^1.28.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}
