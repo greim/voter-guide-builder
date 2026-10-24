@@ -8,8 +8,10 @@ import { slug } from './render.ts';
 import { pageText, type PageText } from './extract.ts';
 
 // Stage 3: Claude turns the booklet into the Guide schema, in two steps.
-//   1. outline.json: the measures and their page ranges, from the extracted
-//      text (cheap, and small enough to read whole).
+//   1. outline.json: the measures and which pages mention each, from the
+//      extracted text (cheap, and small enough to read whole). Booklets often
+//      spread a measure out: Colorado's has a quick-reference YES/NO section,
+//      the analyses, then ballot titles with the legal text.
 //   2. measures/<id>.json: each measure transcribed from a PDF of just its
 //      pages, so Claude sees the layout (tables, charts) and the reply stays
 //      well under the output limit.
@@ -19,7 +21,7 @@ import { pageText, type PageText } from './extract.ts';
 interface Outline {
   jurisdiction: string;
   election: string;
-  measures: { label: string; title: string; firstPage: number; lastPage: number }[];
+  measures: { label: string; title: string; pages: number[] }[];
 }
 
 const outlineSchema = {
@@ -34,12 +36,11 @@ const outlineSchema = {
       items: {
         type: 'object',
         additionalProperties: false,
-        required: ['label', 'title', 'firstPage', 'lastPage'],
+        required: ['label', 'title', 'pages'],
         properties: {
           label: { type: 'string' },
           title: { type: 'string' },
-          firstPage: { type: 'integer' },
-          lastPage: { type: 'integer' },
+          pages: { type: 'array', items: { type: 'integer' } },
         },
       },
     },
@@ -97,7 +98,7 @@ export async function structure(cache: Cache, pages: PageText[], sourceUrl?: str
   const measures = await mapLimit(outline.measures, 4, async entry => {
     const id = slug(entry.label);
     const reply = await cache.json(['measures', `${id}.json`], async () => {
-      console.log(`      ${entry.label}: pages ${entry.firstPage}-${entry.lastPage}`);
+      console.log(`      ${entry.label}: pages ${pageList(entry.pages)}`);
       return transcribe(booklet, entry);
     });
     return toMeasure(id, entry, reply);
@@ -128,16 +129,29 @@ async function findMeasures(pages: PageText[]): Promise<Outline> {
 function checkOutline(outline: Outline, pageCount: number): void {
   if (!outline.measures.length) throw new Error('structure: no measures found; see outline.json in the cache');
   for (const m of outline.measures) {
-    if (m.firstPage < 1 || m.lastPage > pageCount || m.firstPage > m.lastPage) {
-      throw new Error(`structure: ${m.label} has pages ${m.firstPage}-${m.lastPage}, outside 1-${pageCount}; fix outline.json in the cache`);
+    m.pages = [...new Set(m.pages)].sort((a, b) => a - b);
+    if (!m.pages.length || m.pages[0]! < 1 || m.pages.at(-1)! > pageCount) {
+      throw new Error(`structure: ${m.label} has pages "${pageList(m.pages)}", not within 1-${pageCount}; fix outline.json in the cache`);
     }
   }
 }
 
+/** e.g. "7, 15-18, 69" */
+function pageList(pages: number[]): string {
+  const ranges: string[] = [];
+  for (let i = 0; i < pages.length; i++) {
+    let j = i;
+    while (j + 1 < pages.length && pages[j + 1] === pages[j]! + 1) j++;
+    ranges.push(i === j ? `${pages[i]}` : `${pages[i]}-${pages[j]}`);
+    i = j;
+  }
+  return ranges.join(', ');
+}
+
 async function transcribe(booklet: mupdf.PDFDocument, entry: Outline['measures'][number]): Promise<MeasureReply> {
   const pdf = new mupdf.PDFDocument();
-  for (let p = entry.firstPage; p <= entry.lastPage; p++) pdf.graftPage(-1, booklet, p - 1);
-  const vars = { label: entry.label, title: entry.title, firstPage: `${entry.firstPage}`, lastPage: `${entry.lastPage}` };
+  for (const p of entry.pages) pdf.graftPage(-1, booklet, p - 1);
+  const vars = { label: entry.label, title: entry.title, pages: pageList(entry.pages) };
   return askJson<MeasureReply>({
     name: `structure: ${entry.label}`,
     content: [pdfBlock(pdf.saveToBuffer('garbage=compact,compress').asUint8Array()), textBlock(await prompt('structure-measure', vars))],
@@ -148,7 +162,7 @@ async function transcribe(booklet: mupdf.PDFDocument, entry: Outline['measures']
 function toMeasure(id: string, entry: Outline['measures'][number], reply: MeasureReply): Measure {
   const figures: FigureRef[] = reply.figures.map((f, i) => ({
     id: `fig-${id}-${i + 1}`,
-    page: entry.firstPage + f.page - 1,
+    page: entry.pages[f.page - 1] ?? entry.pages[0]!,
     caption: f.caption,
     section: f.section,
   }));
@@ -171,6 +185,6 @@ function toMeasure(id: string, entry: Outline['measures'][number], reply: Measur
     voteMeaning: reply.voteYes.trim() || reply.voteNo.trim() ? { yes: reply.voteYes, no: reply.voteNo } : undefined,
     sections,
     figures,
-    pages: [entry.firstPage, entry.lastPage],
+    pages: entry.pages,
   };
 }

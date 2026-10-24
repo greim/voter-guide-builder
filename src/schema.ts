@@ -34,8 +34,8 @@ export interface Measure {
   /** The booklet's own sections for this measure, in booklet order. */
   sections: Section[];
   figures: FigureRef[];
-  /** First and last PDF page (1-based) the measure's sections came from; used by verify. */
-  pages: [number, number];
+  /** PDF pages (1-based) the measure's text came from, in order; used by verify. */
+  pages: number[];
 }
 
 export interface VoteMeaning {

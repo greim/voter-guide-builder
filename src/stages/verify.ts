@@ -1,6 +1,6 @@
 import type { Cache } from '../cache.ts';
 import type { Guide, Measure } from '../schema.ts';
-import { pagesText, type PageText } from './extract.ts';
+import { pageText, pagesText, type PageText } from './extract.ts';
 
 // Stage 4: check the structure stage copied the booklet faithfully, by
 // comparing each measure's words with the PDF text of its pages.
@@ -11,7 +11,7 @@ import { pagesText, type PageText } from './extract.ts';
 // Punctuation, case and quote styles are ignored. verify-report.txt lists
 // everything for review.
 
-/** Missing runs this long or longer are listed in the report. */
+/** Left-out runs this long or longer are listed in the report. */
 const reportMissingRun = 15;
 
 interface Run {
@@ -26,15 +26,15 @@ export interface MeasureCheck {
   matched: number;
   guideWords: number;
   added: Run[];
-  missing: Run[];
+}
+
+interface LeftOut extends Run {
+  page: number;
 }
 
 export async function verify(cache: Cache, guide: Guide, pages: PageText[]): Promise<MeasureCheck[]> {
-  // Booklet text another measure used isn't reported as left out, since
-  // neighboring measures often share a page.
-  const used = new Set(guide.measures.flatMap(m => measureParts(m).flatMap(p => [...grams(words(p), gram)])));
-  const checks = guide.measures.map(m => checkMeasure(m, pages, used));
-  await cache.writeText(report(checks), 'verify-report.txt');
+  const checks = guide.measures.map(m => checkMeasure(m, pages));
+  await cache.writeText(report(checks, leftOut(guide, pages)), 'verify-report.txt');
   const failed = checks.filter(c => c.added.length);
   if (failed.length) {
     throw new Error(
@@ -46,13 +46,11 @@ export async function verify(cache: Cache, guide: Guide, pages: PageText[]): Pro
   return checks;
 }
 
-/** `used`: n-grams of guide text that count as not left out (default: this measure's own). */
-export function checkMeasure(m: Measure, pages: PageText[], used?: Set<string>): MeasureCheck {
-  const pdf = words(pagesText(pages, m.pages[0], m.pages[1]));
-  const check: MeasureCheck = { id: m.id, matched: 0, guideWords: 0, added: [], missing: [] };
+export function checkMeasure(m: Measure, pages: PageText[]): MeasureCheck {
+  const pdf = words(pagesText(pages, m.pages));
+  const check: MeasureCheck = { id: m.id, matched: 0, guideWords: 0, added: [] };
   const pdfGrams = new Map<number, Set<string>>();
   const gramsOf = (n: number) => pdfGrams.get(n) ?? pdfGrams.set(n, grams(pdf, n)).get(n)!;
-  const guideGrams = new Set<string>();
 
   // Each field and section is checked on its own, and a word counts as found
   // when some run of n words around it appears in the booklet. So the guide
@@ -61,14 +59,27 @@ export function checkMeasure(m: Measure, pages: PageText[], used?: Set<string>):
   for (const part of measureParts(m)) {
     const ours = words(part);
     const n = Math.min(gram, ours.length);
-    for (const g of grams(ours, gram)) guideGrams.add(g);
     check.guideWords += ours.length;
     const found = covered(ours, n, gramsOf(n));
     check.matched += found.filter(Boolean).length;
     check.added.push(...runs(ours, found, 1));
   }
-  check.missing = runs(pdf, covered(pdf, gram, used ?? guideGrams), reportMissingRun);
   return check;
+}
+
+/**
+ * Text on the measures' pages that no measure used, page by page. Neighboring
+ * measures often share a page, so this is reported once for the whole guide.
+ */
+function leftOut(guide: Guide, pages: PageText[]): LeftOut[] {
+  const used = new Set(guide.measures.flatMap(m => measureParts(m).flatMap(p => [...grams(words(p), gram)])));
+  const measurePages = new Set(guide.measures.flatMap(m => m.pages));
+  return pages
+    .filter(p => measurePages.has(p.page))
+    .flatMap(p => {
+      const ws = words(pageText(p));
+      return runs(ws, covered(ws, gram, used), reportMissingRun).map(r => ({ ...r, page: p.page }));
+    });
 }
 
 /** Words in a row that make up one n-gram. */
@@ -129,19 +140,17 @@ export function words(text: string): string[] {
   );
 }
 
-function report(checks: MeasureCheck[]): string {
+function report(checks: MeasureCheck[], left: LeftOut[]): string {
   const out: string[] = [];
   for (const c of checks) {
     const pct = c.guideWords ? ((100 * c.matched) / c.guideWords).toFixed(1) : '0';
     out.push(`== ${c.id}: ${pct}% of ${c.guideWords} guide words found in the booklet`);
-    for (const r of c.added) {
-      out.push(`  NOT IN BOOKLET: …${r.before.join(' ')} [+ ${r.words.join(' ')} +]`);
-    }
-    for (const r of c.missing) {
-      const shown = r.words.length > 24 ? [...r.words.slice(0, 12), '…', ...r.words.slice(-8)] : r.words;
-      out.push(`  left out (${r.words.length} words): …${r.before.join(' ')} [- ${shown.join(' ')} -]`);
-    }
-    out.push('');
+    for (const r of c.added) out.push(`  NOT IN BOOKLET: …${r.before.join(' ')} [+ ${r.words.join(' ')} +]`);
   }
-  return out.join('\n');
+  out.push('', `== Booklet text left out of the guide (runs of ${reportMissingRun}+ words)`);
+  for (const r of left) {
+    const shown = r.words.length > 24 ? [...r.words.slice(0, 12), '…', ...r.words.slice(-8)] : r.words;
+    out.push(`  page ${r.page}, ${r.words.length} words: …${r.before.join(' ')} [- ${shown.join(' ')} -]`);
+  }
+  return out.join('\n') + '\n';
 }

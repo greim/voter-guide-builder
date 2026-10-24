@@ -69,9 +69,9 @@ export function pageText(p: PageText): string {
   return p.blocks.flatMap(b => (b.type === 'text' ? b.lines.map(l => l.text.trim()) : [])).join('\n');
 }
 
-/** Text of pages first..last (1-based, inclusive). */
-export function pagesText(pages: PageText[], first: number, last: number): string {
-  return pages.filter(p => p.page >= first && p.page <= last).map(pageText).join('\n');
+/** Text of the given pages (1-based), in booklet order. */
+export function pagesText(pages: PageText[], which: number[]): string {
+  return pages.filter(p => which.includes(p.page)).map(pageText).join('\n');
 }
 
 // The parts of mupdf's structured-text JSON used here.

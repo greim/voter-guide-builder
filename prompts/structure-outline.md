@@ -10,4 +10,4 @@ Below is the text of an official voter information booklet about ballot measures
 - measures: every ballot measure the booklet analyzes, in booklet order. For each:
   - label: its designation exactly as printed, e.g. "Amendment 81" or "Proposition NN".
   - title: its short title exactly as printed, e.g. "Constitutional Right to Hunt and Fish".
-  - firstPage and lastPage: the page numbers (the n attribute) of the first and last page of the booklet's explanation of that measure. Leave out pages that hold only the measure's full legal text, and pages about other measures or the booklet in general.
+  - pages: the page numbers (the n attribute) of every page with something about this measure that a voter would read: its summary and analysis, arguments, fiscal impact, any quick-reference entry explaining a "yes" and "no" vote, and the page where its ballot title (the question on the ballot) is printed. These are often in separate parts of the booklet. Leave out pages that hold only the measure's full legal text, tables of contents, and pages about the booklet in general.

@@ -59,7 +59,7 @@ const measures: Measure[] = splitOn(blueBook, 1).map(({ heading, body }) => {
     sections.push({ heading: s.heading, markdown });
   }
 
-  return { id, label, title, ballotTitle: ballotTitle(id), summary, voteMeaning, sections, figures, pages: [0, 0] };
+  return { id, label, title, ballotTitle: ballotTitle(id), summary, voteMeaning, sections, figures, pages: [] };
 });
 
 const guide: Guide = {
