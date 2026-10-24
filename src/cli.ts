@@ -1,6 +1,8 @@
 import { parseArgs } from 'node:util';
+import { analysisPromptForPage } from './prompts.ts';
 import { fetchBooklet } from './stages/fetch.ts';
-import { analyze, extract, figures, render, structure, verify } from './stages/todo.ts';
+import { render } from './stages/render.ts';
+import { analyze, extract, figures, structure, verify } from './stages/todo.ts';
 
 const usage = `Usage: npm run guide -- --pdf <url-or-path> --out <folder>
 
@@ -39,5 +41,6 @@ const analyses = await analyze(cache, guide);
 step(6, 'figures');
 await figures(cache, guide);
 step(7, 'render');
-await render(cache, guide, analyses, values.out);
+const analysisPrompt = await analysisPromptForPage(guide);
+await render({ guide, analyses, analysisPrompt, figuresDir: cache.path('figures') }, values.out);
 console.log(`Done. Open ${values.out}/index.html to review.`);

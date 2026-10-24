@@ -1,9 +1,8 @@
 import type { Cache } from '../cache.ts';
 import type { Analysis, Guide } from '../schema.ts';
 
-// Stages 2 to 7, not built yet. Build order (see README): render first, using
-// fixtures/colorado-2026 as its input, then extract + structure + verify,
-// then analyze, then figures.
+// Stages 2 to 6, not built yet. Build order (see README): extract + structure
+// + verify, then analyze, then figures.
 
 const todo = (stage: string): never => {
   throw new Error(`The ${stage} stage isn't built yet.`);
@@ -32,9 +31,4 @@ export async function analyze(_cache: Cache, _guide: Guide): Promise<Analysis[]>
 /** Stage 6: crop and render each figure to PNG. Writes figures/<id>.png. */
 export async function figures(_cache: Cache, _guide: Guide): Promise<void> {
   todo('figures');
-}
-
-/** Stage 7: template + styles/main.css into the output folder. */
-export async function render(_cache: Cache, _guide: Guide, _analyses: Analysis[], _outDir: string): Promise<void> {
-  todo('render');
 }

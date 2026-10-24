@@ -27,7 +27,7 @@ so delete one file to redo one piece.
 | 4 | verify | code | `verify-report.txt`; stops on text that went missing |
 | 5 | analyze | Claude, one call per measure, `prompts/analysis.md` | `analyses/*.md` |
 | 6 | figures | code | `figures/*.png` |
-| 7 | render | code, `templates/` + `styles/main.css` | `<out>/index.html`, `<out>/assets/` |
+| 7 | render | code (`src/stages/render.ts`, `styles/main.css`) | `<out>/index.html`, `<out>/assets/` |
 
 `src/schema.ts` is state-neutral: booklet sections are Markdown, and special
 pieces like the YES/NO boxes are optional typed fields. Guides share one
@@ -37,19 +37,27 @@ stylesheet, linked as `../main.css` from each guide folder.
 
 ```
 src/            pipeline code (cli.ts runs the stages)
+scripts/        fixture tools (see below)
 prompts/        prompts sent to Claude
-templates/      HTML template for the render stage
 styles/         main.css, copied into the Pages repo on each run
-assets/         icons used by the template
+assets/icons/   heading icons, copied next to main.css
 fixtures/       hand-made Colorado 2026 guide: the answer key for each stage
 cache/          stage outputs (git-ignored)
+out/            scratch output (git-ignored)
 ```
+
+## Fixtures
+
+`fixtures/colorado-2026/` holds the hand-made 2026 page (`guide.html`) and the
+Markdown it came from. `npm run fixture` turns that Markdown into `guide.json`
+and `analyses/*.md`, the data the later stages should produce.
+`npm run render-fixture -- out/colorado-2026` renders that data, so the render
+stage can be checked against `guide.html` without calling Claude.
 
 ## Status
 
-Only `fetch` is built. Build order:
+`fetch` and `render` are built. Next, in order:
 
-1. **render**: reproduce `fixtures/colorado-2026/guide.html` from fixture data
-2. **extract, structure, verify**: match `fixtures/colorado-2026/blue-book.md`
-3. **analyze**: compare tone and length with `fixtures/colorado-2026/analyses.md`
-4. **figures**: compare with the fixture PNGs
+1. **extract, structure, verify**: match `fixtures/colorado-2026/guide.json`
+2. **analyze**: compare tone and length with `fixtures/colorado-2026/analyses/`
+3. **figures**: compare with the fixture PNGs

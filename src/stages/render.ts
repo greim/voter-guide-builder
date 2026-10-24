@@ -1,0 +1,247 @@
+import { copyFile, mkdir, readdir, writeFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
+import { Marked, type Tokens } from 'marked';
+import { markedSmartypants } from 'marked-smartypants';
+import type { Analysis, Measure, RenderInput, Section } from '../schema.ts';
+
+// Stage 7: the guide as one static HTML page. No AI here: everything that was
+// hand-tuned on the Colorado 2026 page lives in this file and styles/main.css.
+//
+// Output layout (guides share one stylesheet and its icons):
+//   <out>/index.html
+//   <out>/assets/<figure id>.png
+//   <out>/../main.css
+//   <out>/../icons/*.png
+
+const repoRoot = join(import.meta.dirname, '..', '..');
+
+export async function render(input: RenderInput, outDir: string): Promise<void> {
+  const html = renderHtml(input);
+  await mkdir(join(outDir, 'assets'), { recursive: true });
+  await writeFile(join(outDir, 'index.html'), html);
+
+  for (const fig of input.guide.measures.flatMap(m => m.figures)) {
+    await copyFile(join(input.figuresDir, `${fig.id}.png`), join(outDir, 'assets', `${fig.id}.png`));
+  }
+
+  const shared = dirname(outDir);
+  await mkdir(join(shared, 'icons'), { recursive: true });
+  await copyFile(join(repoRoot, 'styles', 'main.css'), join(shared, 'main.css'));
+  for (const icon of await readdir(join(repoRoot, 'assets', 'icons'))) {
+    await copyFile(join(repoRoot, 'assets', 'icons', icon), join(shared, 'icons', icon));
+  }
+}
+
+interface TocEntry {
+  id: string;
+  text: string;
+  children: TocEntry[];
+}
+
+export function renderHtml({ guide, analyses, analysisPrompt }: RenderInput): string {
+  const md = new Markdown();
+  const analysisFor = new Map(analyses.map(a => [a.measureId, a]));
+
+  const govToc: TocEntry[] = [];
+  const govBody = guide.measures.map(m => {
+    const entry: TocEntry = { id: m.id, text: `${m.label}: ${m.title}`, children: [] };
+    govToc.push(entry);
+    return measureSection(m, md, entry, analysisFor.has(m.id));
+  });
+
+  const analysisToc: TocEntry[] = [];
+  const analysisBody = guide.measures.flatMap(m => {
+    const a = analysisFor.get(m.id);
+    if (!a) return [];
+    const entry: TocEntry = { id: `analysis-${m.id}`, text: `${m.label}: ${m.title}`, children: [] };
+    analysisToc.push(entry);
+    return [analysisSection(m, a, md, entry)];
+  });
+
+  return `<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>${esc(guide.title)}</title>
+  <link rel="stylesheet" href="../main.css">
+</head>
+
+<body>
+  <nav id="toc" role="doc-toc">
+    <h1>Table of Contents</h1>
+    <h2><a href="#summaries">Official Summaries</a></h2>
+${tocList(govToc, 4)}
+${analysisToc.length ? `    <h2><a href="#analyses">Analyses</a></h2>\n${tocList(analysisToc, 4)}` : ''}
+  </nav>
+  <div id="main">
+    <div id="gov-copy">
+      <section>
+        <h1 id="summaries">Official Summaries</h1>
+        <p>
+          <em>These summaries were taken directly from the <a href="${esc(guide.sourceUrl)}">${esc(guide.jurisdiction)} ${esc(guide.election)} ballot information booklet</a>.</em>
+        </p>
+      </section>
+${govBody.join('\n')}
+    </div>
+${analysisBody.length ? `    <div id="analyses">
+      <section>
+        <h1>Ballot Initiative Analyses</h1>
+        <p>
+          Below are Claude’s responses to the following prompt:
+        </p>
+        <blockquote>
+          ${md.block(`*${analysisPrompt.trim()}*`)}
+        </blockquote>
+      </section>
+${analysisBody.join('\n')}
+    </div>` : ''}
+  </div>
+  <a href="#toc" id="to-toc">↑ Contents</a>
+</body>
+
+</html>
+`;
+}
+
+function measureSection(m: Measure, md: Markdown, toc: TocEntry, hasAnalysis: boolean): string {
+  const parts: string[] = [];
+  parts.push(`<h2 id="${m.id}">${esc(m.label)}: <span class="subheading">${esc(m.title)}</span></h2>`);
+
+  if (m.ballotTitle) {
+    const id = md.ids.take(`${m.id}-ballot-title`);
+    toc.children.push({ id, text: 'Ballot Title', children: [] });
+    parts.push(`<h3 id="${id}">Ballot Title</h3>`, `<p>${md.inline(m.ballotTitle)}</p>`);
+  }
+  if (m.summary) parts.push(md.block(m.summary));
+  if (hasAnalysis) {
+    parts.push(`<p><em>See also: <a href="#analysis-${m.id}">Claude analysis</a>.</em></p>`);
+  }
+  if (m.voteMeaning) {
+    const id = md.ids.take(`${m.id}-what-your-vote-means`);
+    toc.children.push({ id, text: 'What Your Vote Means', children: [] });
+    parts.push(
+      `<h3 id="${id}">What Your Vote Means</h3>`,
+      `<div class="vote-meaning">`,
+      `  <p class="yes">${md.inline(m.voteMeaning.yes)}</p>`,
+      `  <p class="no">${md.inline(m.voteMeaning.no)}</p>`,
+      `</div>`,
+    );
+  }
+  for (const s of m.sections) parts.push(section(s, m.id, md, toc));
+
+  return wrapSection(parts);
+}
+
+function section(s: Section, prefix: string, md: Markdown, toc: TocEntry): string {
+  const id = md.ids.take(`${prefix}-${slug(s.heading)}`);
+  const entry: TocEntry = { id, text: s.heading, children: [] };
+  toc.children.push(entry);
+  return `<h3 id="${id}">${md.inline(s.heading)}</h3>\n${md.block(s.markdown, prefix, entry, 4)}`;
+}
+
+function analysisSection(m: Measure, a: Analysis, md: Markdown, toc: TocEntry): string {
+  return wrapSection([
+    `<h2 id="analysis-${m.id}">Analysis of ${esc(m.label)}: <span class="subheading">${esc(m.title)}</span></h2>`,
+    `<p><em>See also: <a href="#${m.id}">official summary</a>.</em></p>`,
+    md.block(a.markdown, `analysis-${m.id}`, toc, 3),
+  ]);
+}
+
+function wrapSection(parts: string[]): string {
+  return `      <section>\n${indent(parts.join('\n'), 8)}\n      </section>`;
+}
+
+function tocList(entries: TocEntry[], depth: number): string {
+  const pad = ' '.repeat(depth);
+  const items = entries.map(e => {
+    const link = `<a href="#${e.id}">${esc(e.text)}</a>`;
+    if (!e.children.length) return `${pad}  <li>${link}</li>`;
+    return `${pad}  <li>\n${pad}    ${link}\n${tocList(e.children, depth + 4)}\n${pad}  </li>`;
+  });
+  return `${pad}<ul>\n${items.join('\n')}\n${pad}</ul>`;
+}
+
+/** Markdown rendering with guide-wide unique heading ids. */
+class Markdown {
+  readonly ids = new Ids();
+  private readonly marked = new Marked();
+  private prefix = '';
+  private toc: TocEntry | undefined;
+  private tocDepth = 0;
+
+  constructor() {
+    const self = this;
+    // Curly quotes, dashes and ellipses, as the hand-made page had.
+    this.marked.use(markedSmartypants());
+    this.marked.use({
+      walkTokens(token) {
+        // Markdown sections start at ##; on the page, measures are h2 and sections h3.
+        if (token.type === 'heading') token.depth = Math.min(token.depth + 1, 6);
+      },
+      renderer: {
+        heading({ tokens, depth, text }: Tokens.Heading) {
+          const id = self.ids.take(self.prefix ? `${self.prefix}-${slug(text)}` : slug(text));
+          const entry = { id, text, children: [] };
+          if (self.toc && depth === self.tocDepth) self.toc.children.push(entry);
+          else if (self.toc && depth === self.tocDepth + 1) self.toc.children.at(-1)?.children.push(entry);
+          return `<h${depth} id="${id}">${this.parser.parseInline(tokens)}</h${depth}>\n`;
+        },
+      },
+    });
+  }
+
+  /**
+   * Renders block Markdown. Headings get ids under `prefix`; those at `tocDepth`
+   * (and one level below) are added to `toc`.
+   */
+  block(markdown: string, prefix = '', toc?: TocEntry, tocDepth = 0): string {
+    this.prefix = prefix;
+    this.toc = toc;
+    this.tocDepth = tocDepth;
+    const html = this.marked.parse(markdown, { async: false });
+    this.toc = undefined;
+    return html
+      .trim()
+      .replace(/<p>(<img [^>]*>)<\/p>/g, '<figure>$1</figure>')
+      .replace(/<table>/g, '<div class="table-container"><table>')
+      .replace(/<\/table>/g, '</table></div>');
+  }
+
+  inline(markdown: string): string {
+    return this.marked.parseInline(markdown, { async: false });
+  }
+}
+
+class Ids {
+  private readonly seen = new Set<string>();
+
+  take(base: string): string {
+    let id = base;
+    for (let n = 2; this.seen.has(id); n++) id = `${base}-${n}`;
+    this.seen.add(id);
+    return id;
+  }
+}
+
+export function slug(text: string): string {
+  return text
+    .normalize('NFKD')
+    .toLowerCase()
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+function esc(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function indent(text: string, n: number): string {
+  const pad = ' '.repeat(n);
+  return text
+    .split('\n')
+    .map(line => (line ? pad + line : line))
+    .join('\n');
+}

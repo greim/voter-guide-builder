@@ -197,11 +197,11 @@ div#main h2::before {
 }
 
 div#gov-copy h2::before {
-  background-image: url(ballot.png);
+  background-image: url(icons/ballot.png);
 }
 
 div#analyses h2::before {
-  background-image: url(analysis.png);
+  background-image: url(icons/analysis.png);
 }
 
 div#main h2 span.subheading {

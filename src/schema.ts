@@ -27,6 +27,8 @@ export interface Measure {
   voteThreshold?: string;
   /** The question exactly as it appears on the ballot. */
   ballotTitle?: string;
+  /** Unheaded text that opens the measure, as Markdown (e.g. "Amendment 81 proposes ..."). */
+  summary?: string;
   /** Rendered as the YES/NO boxes when present. */
   voteMeaning?: VoteMeaning;
   /** The booklet's own sections for this measure, in booklet order. */
@@ -43,7 +45,11 @@ export interface VoteMeaning {
 
 export interface Section {
   heading: string;
-  /** Section body as Markdown, text verbatim from the booklet. */
+  /**
+   * Section body as Markdown, text verbatim from the booklet. Subheadings are
+   * written one level below the section (###), and figures are images pointing
+   * at assets/<figure id>.png.
+   */
   markdown: string;
 }
 
@@ -60,5 +66,16 @@ export interface FigureRef {
 /** One analysis per measure, written by the analyze stage. */
 export interface Analysis {
   measureId: string;
+  /** Sections are ## headings. */
   markdown: string;
+}
+
+/** Everything the render stage needs. */
+export interface RenderInput {
+  guide: Guide;
+  analyses: Analysis[];
+  /** The analysis prompt as sent, shown above the analyses. */
+  analysisPrompt: string;
+  /** Folder holding each figure's PNG, named <figure id>.png. */
+  figuresDir: string;
 }
