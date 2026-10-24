@@ -10,6 +10,9 @@ npm run guide -- --pdf https://content.leg.colorado.gov/sites/default/files/2026
                  --out ../greim.github.io/ballot-guides/colorado-2026
 ```
 
+`--pdf` can also be a downloaded file; then pass `--source-url` so the guide
+links to the published booklet.
+
 Then open the output's `index.html`, review, and commit and push the Pages repo.
 The guide appears at `https://greim.github.io/ballot-guides/colorado-2026/`.
 
@@ -17,14 +20,22 @@ The guide appears at `https://greim.github.io/ballot-guides/colorado-2026/`.
 
 Code runs every stage in order; Claude is called only where judgment is needed.
 Each stage writes to `cache/<pdf-hash>/` and is skipped when its output exists,
-so delete one file to redo one piece.
+so delete one file to redo one piece. To fix a measure by hand, edit
+`measures/<id>.json` (or `outline.json` for page ranges); `guide.json` is
+rebuilt from those on every run.
+
+Verify compares each measure's words with the PDF text of its pages, ignoring
+case and punctuation. Any guide words missing from the booklet stop the run,
+since that means Claude reworded or added something. Booklet text the guide
+left out is only listed, because page headers and legal text are expected
+there. `--skip-verify` renders anyway.
 
 | # | Stage | Done by | Writes |
 |---|---|---|---|
 | 1 | fetch | code | `booklet.pdf` |
-| 2 | extract | code (mupdf) | `pages.json`, `pages/*.png` |
-| 3 | structure | Claude | `guide.json` (see `src/schema.ts`) |
-| 4 | verify | code | `verify-report.txt`; stops on text that went missing |
+| 2 | extract | code (mupdf) | `pages.json`: text and image positions per page |
+| 3 | structure | Claude: one call to find the measures, then one per measure on just its pages | `outline.json`, `measures/*.json`, then `guide.json` (see `src/schema.ts`) |
+| 4 | verify | code | `verify-report.txt`; stops on guide text that isn't in the booklet |
 | 5 | analyze | Claude, one call per measure, `prompts/analysis.md` | `analyses/*.md` |
 | 6 | figures | code | `figures/*.png` |
 | 7 | render | code (`src/stages/render.ts`, `styles/main.css`) | `<out>/index.html`, `<out>/assets/` |
@@ -53,11 +64,14 @@ Markdown it came from. `npm run fixture` turns that Markdown into `guide.json`
 and `analyses/*.md`, the data the later stages should produce.
 `npm run render-fixture -- out/colorado-2026` renders that data, so the render
 stage can be checked against `guide.html` without calling Claude.
+`npm run compare-fixture -- cache/<hash>/guide.json` compares a structure run
+on the Blue Book with the fixture. Save the Blue Book as
+`fixtures/colorado-2026/blue-book.pdf` (git-ignored).
 
 ## Status
 
-`fetch` and `render` are built. Next, in order:
+`fetch`, `extract`, `structure`, `verify` and `render` are built; structure
+hasn't had a real run yet. Next, in order:
 
-1. **extract, structure, verify**: match `fixtures/colorado-2026/guide.json`
-2. **analyze**: compare tone and length with `fixtures/colorado-2026/analyses/`
-3. **figures**: compare with the fixture PNGs
+1. **analyze**: compare tone and length with `fixtures/colorado-2026/analyses/`
+2. **figures**: compare with the fixture PNGs

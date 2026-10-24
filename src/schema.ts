@@ -54,7 +54,7 @@ export interface Section {
 }
 
 export interface FigureRef {
-  /** e.g. "fig-1-state-revenue-limits-under-prop-nn" */
+  /** e.g. "fig-proposition-nn-1" (the fixture uses names like "fig-1-state-revenue-limits-under-prop-nn") */
   id: string;
   /** 1-based PDF page the figure is on. */
   page: number;

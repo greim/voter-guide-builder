@@ -11,7 +11,8 @@
     "guide": "tsx src/cli.ts",
     "fixture": "tsx scripts/fixture-colorado-2026.ts",
     "render-fixture": "tsx scripts/render-fixture.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "compare-fixture": "tsx scripts/compare-fixture.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.3.0",
