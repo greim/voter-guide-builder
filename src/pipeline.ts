@@ -49,7 +49,7 @@ export async function run(o: RunOptions): Promise<void> {
   step(6, 'figures');
   await figures(cache, guide);
   step(7, 'render');
-  await render({ guide, analyses, analysisPrompt: analysisPromptForPage(guide, prompt.template), figuresDir: cache.path('figures') }, o.out);
+  await render({ guide, analyses, analysisPrompt: analysisPromptForPage(guide, prompt.template), analysisSettings: { model: o.model, webSearches: o.webSearches }, figuresDir: cache.path('figures') }, o.out);
   step(8, 'pdf');
   const pdf = await printPdf(o.out);
   console.log(`Done. Open ${o.out}/index.html and ${pdf} to review.`);

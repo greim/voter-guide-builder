@@ -76,6 +76,8 @@ export interface RenderInput {
   analyses: Analysis[];
   /** The analysis prompt as sent, shown above the analyses. */
   analysisPrompt: string;
+  /** The model that wrote the analyses, and its web search limit (0 for none), shown under the prompt. */
+  analysisSettings?: { model: string; webSearches: number };
   /** Folder holding each figure's PNG, named <figure id>.png. */
   figuresDir: string;
 }

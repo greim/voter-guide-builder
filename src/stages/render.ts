@@ -38,7 +38,7 @@ interface TocEntry {
   children: TocEntry[];
 }
 
-export function renderHtml({ guide, analyses, analysisPrompt }: RenderInput): string {
+export function renderHtml({ guide, analyses, analysisPrompt, analysisSettings }: RenderInput): string {
   const md = new Markdown();
   const analysisFor = new Map(analyses.map(a => [a.measureId, a]));
 
@@ -93,7 +93,10 @@ ${analysisBody.length ? `    <div id="analyses">
         </p>
         <blockquote>
           ${md.block(`*${analysisPrompt.trim()}*`)}
-        </blockquote>
+        </blockquote>${analysisSettings ? `
+        <p>
+          ${esc(settingsLine(analysisSettings))}
+        </p>` : ''}
       </section>
 ${analysisBody.join('\n')}
     </div>` : ''}
@@ -225,6 +228,13 @@ class Ids {
     this.seen.add(id);
     return id;
   }
+}
+
+function settingsLine({ model, webSearches }: { model: string; webSearches: number }): string {
+  const search = webSearches
+    ? `with web search (up to ${webSearches} ${webSearches === 1 ? 'search' : 'searches'} per initiative)`
+    : 'without web search';
+  return `Model: ${model}, ${search}.`;
 }
 
 export function slug(text: string): string {

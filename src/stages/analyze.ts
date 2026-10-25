@@ -38,13 +38,19 @@ export async function analyze(cache: Cache, guide: Guide, p: AnalysisPrompt, web
       const vars = { jurisdiction: guide.jurisdiction, election: guide.election, measure: `${m.label}: ${m.title}` };
       const markdown = await askText({
         name: `analyze: ${m.label}`,
-        content: [textBlock(`${fill(p.template, vars)}\n\n${p.format}`), textBlock(officialText(m))],
+        content: [textBlock(`${fill(p.template, vars)}\n\n${fill(p.format, { research: research(webSearches) })}`), textBlock(officialText(m))],
         webSearches,
       });
       await cache.writeText(`${markdown}\n`, ...file);
     }
     return { measureId: m.id, markdown: (await readFile(cache.path(...file), 'utf8')).trim() };
   });
+}
+
+function research(webSearches: number): string {
+  return webSearches
+    ? "You're free to search online for more detail."
+    : "Web search isn't available, so rely on the official text and what you already know, and say where your information may be out of date.";
 }
 
 /** The measure as the guide shows it, as one Markdown document. */
