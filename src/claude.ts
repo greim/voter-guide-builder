@@ -48,17 +48,19 @@ export interface JsonRequest {
 /** Sends one user turn and returns Claude's reply parsed as JSON matching `schema`. */
 export async function askJson<T>({ name, content, schema, effort = 'high' }: JsonRequest): Promise<T> {
   if (settings.model === 'dummy') return dummyJson(content, schema) as T;
-  client ??= new Anthropic();
-  const stream = client.beta.messages.stream({
-    model: settings.model,
-    max_tokens: 64000,
-    // If a safety classifier declines, the server retries on a fallback model
-    // instead of failing the run.
-    ...fallbacks(),
-    output_config: { effort, format: { type: 'json_schema', schema } },
-    messages: [{ role: 'user', content }],
-  });
-  const message = await stream.finalMessage();
+  const message = await call(name, () =>
+    api()
+      .beta.messages.stream({
+        model: settings.model,
+        max_tokens: 64000,
+        // If a safety classifier declines, the server retries on a fallback model
+        // instead of failing the run.
+        ...fallbacks(),
+        output_config: { effort, format: { type: 'json_schema', schema } },
+        messages: [{ role: 'user', content }],
+      })
+      .finalMessage(),
+  );
 
   if (message.stop_reason === 'refusal') {
     throw new Error(`${name}: Claude declined (${message.stop_details?.category ?? 'no category'})`);
@@ -82,23 +84,24 @@ export interface TextRequest {
 /** Sends one user turn and returns Claude's written reply (its text blocks, joined). */
 export async function askText({ name, content, webSearches = 0, effort = 'high' }: TextRequest): Promise<string> {
   if (settings.model === 'dummy') return dummyText();
-  client ??= new Anthropic();
   const messages: BetaMessageParam[] = [{ role: 'user', content }];
   const text: string[] = [];
   let message: BetaMessage;
   // A turn with web searches can pause partway; resending it continues where
   // it stopped, so the reply's text is collected across rounds.
   for (let rounds = 0; ; rounds++) {
-    message = await client.beta.messages
-      .stream({
-        model: settings.model,
-        max_tokens: 64000,
-        ...fallbacks(),
-        output_config: { effort },
-        tools: webSearches ? [webSearchTool(webSearches)] : undefined,
-        messages,
-      })
-      .finalMessage();
+    message = await call(name, () =>
+      api()
+        .beta.messages.stream({
+          model: settings.model,
+          max_tokens: 64000,
+          ...fallbacks(),
+          output_config: { effort },
+          tools: webSearches ? [webSearchTool(webSearches)] : undefined,
+          messages,
+        })
+        .finalMessage(),
+    );
     for (const b of message.content) if (b.type === 'text') text.push(b.text);
     if (message.stop_reason !== 'pause_turn') break;
     if (rounds >= 5) throw new Error(`${name}: still paused after ${rounds + 1} rounds`);
@@ -112,6 +115,45 @@ export async function askText({ name, content, webSearches = 0, effort = 'high' 
     throw new Error(`${name}: the reply hit max_tokens before it was complete`);
   }
   return text.join('').trim();
+}
+
+function api(): Anthropic {
+  return (client ??= new Anthropic());
+}
+
+/**
+ * Runs one API request, turning a failure into a message a person can act
+ * on. The SDK's own message is the raw JSON response.
+ */
+async function call<T>(name: string, request: () => Promise<T>): Promise<T> {
+  try {
+    return await request();
+  } catch (err) {
+    if (!(err instanceof Anthropic.AnthropicError)) throw err;
+    const body = err instanceof Anthropic.APIError ? (err.error as { error?: { message?: string } } | undefined) : undefined;
+    const detail = body?.error?.message ?? err.message;
+    const hint = errorHint(err, detail);
+    const said = err instanceof Anthropic.APIError && err.status ? 'the Anthropic API said: ' : '';
+    throw new Error(`${name}: ${said}${detail}${hint ? `\n${hint}` : ''}`);
+  }
+}
+
+const cached = 'Work that finished is cached, so a re-run picks up where this one stopped.';
+
+function errorHint(err: InstanceType<typeof Anthropic.AnthropicError>, detail: string): string | undefined {
+  if (/credit balance/i.test(detail)) {
+    return `Add credits at https://console.anthropic.com/settings/billing, then re-run. ${cached}`;
+  }
+  if (err instanceof Anthropic.AuthenticationError || /api.?key/i.test(detail)) {
+    return 'Check ANTHROPIC_API_KEY (in .env or your shell). Keys are at https://console.anthropic.com/settings/keys.';
+  }
+  if (err instanceof Anthropic.NotFoundError && /model/i.test(detail)) return `Check --model ("${settings.model}").`;
+  if (err instanceof Anthropic.APIConnectionError) return `Couldn't reach the API; check your internet connection. ${cached}`;
+  if (err instanceof Anthropic.RateLimitError) return `Rate limited even after retrying; wait a minute and re-run. ${cached}`;
+  if (err instanceof Anthropic.APIError && (err.status ?? 0) >= 500) {
+    return `Anthropic's servers had a problem; re-run in a few minutes. ${cached}`;
+  }
+  return undefined;
 }
 
 export function pdfBlock(bytes: Uint8Array): BetaContentBlockParam {
