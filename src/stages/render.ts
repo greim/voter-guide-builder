@@ -122,10 +122,9 @@ function intro(guide: Guide, hasAnalyses: boolean): string {
   const booklet = `<a href="${esc(guide.sourceUrl)}">${esc(guide.jurisdiction)} ${esc(guide.election)} ballot information booklet</a>`;
   if (!hasAnalyses) return `This page has the official summaries of each measure from the ${booklet}, in one place.`;
   return (
-    `<strong>What this is:</strong> the official summaries from the ${booklet}, ` +
-    `plus an analysis of each measure written by Claude, an AI model. ` +
-    `The booklet tells you what a measure does. The analysis adds what it leaves out: background, context, and likely real-world effects. ` +
-    `Read it as a second opinion, not a verdict.`
+    `This page gives you more than the ${booklet}. ` +
+    `Along with the official summaries, it has an AI-written analysis of each measure ` +
+    `that fills in the background and context the booklet leaves out, so you can vote with a fuller picture.`
   );
 }
 
