@@ -16,7 +16,7 @@ const program = new Command('voter-guide-builder')
     `
 Examples:
   npx voter-guide-builder interactive
-  npx voter-guide-builder generate --pdf booklet.pdf --out ../greim.github.io/ballot-guides/colorado-2026
+  npx voter-guide-builder generate --pdf booklet.pdf --out ../my-site/ballot-guides/colorado-2026
   npx voter-guide-builder generate --pdf booklet.pdf --out out/test --model dummy`,
   );
 
