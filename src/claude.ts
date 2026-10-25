@@ -4,13 +4,17 @@ import type {
   BetaMessage,
   BetaMessageParam,
 } from '@anthropic-ai/sdk/resources/beta/messages/messages';
+import { dummyJson, dummyText } from './dummy.ts';
 
 // The one place the pipeline talks to Claude. Credentials come from the
 // environment (ANTHROPIC_API_KEY, or a profile from `ant auth login`).
 
 export const defaultModel = 'claude-opus-5-5';
 
-/** Set from --model; a cheaper model (e.g. claude-haiku-5-5) makes test runs cheap. */
+/**
+ * Set from --model. A cheaper model (e.g. claude-haiku-5-5) makes test runs
+ * cheap, and "dummy" answers with placeholders without calling Claude.
+ */
 export const settings = { model: defaultModel };
 
 // Haiku has no server-side refusal fallback and only the basic web search tool.
@@ -35,6 +39,7 @@ export interface JsonRequest {
 
 /** Sends one user turn and returns Claude's reply parsed as JSON matching `schema`. */
 export async function askJson<T>({ name, content, schema, effort = 'high' }: JsonRequest): Promise<T> {
+  if (settings.model === 'dummy') return dummyJson(content, schema) as T;
   client ??= new Anthropic();
   const stream = client.beta.messages.stream({
     model: settings.model,
@@ -68,6 +73,7 @@ export interface TextRequest {
 
 /** Sends one user turn and returns Claude's written reply (its text blocks, joined). */
 export async function askText({ name, content, webSearches = 0, effort = 'high' }: TextRequest): Promise<string> {
+  if (settings.model === 'dummy') return dummyText();
   client ??= new Anthropic();
   const messages: BetaMessageParam[] = [{ role: 'user', content }];
   const text: string[] = [];

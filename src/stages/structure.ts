@@ -133,11 +133,12 @@ export async function structure(cache: Cache, pages: PageText[], { sourceUrl, on
 /**
  * Answers from another model (--model) are cached apart from the default
  * model's, but the default model's are used when they exist, since they're
- * the ones verify has passed.
+ * the ones verify has passed. The dummy model always uses its own.
  */
 async function cached<T>(cache: Cache, file: string, compute: () => Promise<T>): Promise<T> {
   const parts = file.split('/');
-  if (settings.model === defaultModel || (await cache.has(...parts))) return cache.json(parts, compute);
+  const useDefault = settings.model === defaultModel || (settings.model !== 'dummy' && (await cache.has(...parts)));
+  if (useDefault) return cache.json(parts, compute);
   return cache.json(['by-model', settings.model, ...parts], compute);
 }
 

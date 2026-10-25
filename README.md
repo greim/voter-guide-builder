@@ -13,7 +13,10 @@ npm run guide -- --pdf https://content.leg.colorado.gov/sites/default/files/2026
 `--pdf` can also be a downloaded file; then pass `--source-url` so the guide
 links to the published booklet.
 
-For a cheap test run, combine `--model claude-haiku-5-5` (a much cheaper
+To test the pipeline for free, pass `--model dummy`: no model is called, and
+placeholder answers of the right shape come back instantly (three made-up
+measures copied from the booklet's own lines, so verify still runs for real).
+For a cheap test run with a real model, combine `--model claude-haiku-5-5` (a much cheaper
 model), `--web-searches 0` and `--only amendment-81,proposition-nn`. Answers
 from another model are cached apart from the default model's, which are
 reused when present.

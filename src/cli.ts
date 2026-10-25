@@ -21,7 +21,8 @@ const usage = `Usage: npm run guide -- --pdf <url-or-path> --out <folder>
   --skip-verify   Render even if verify finds text that isn't in the booklet.
   --model <id>    Use another Claude model, e.g. claude-haiku-5-5 for a cheap
                   test run (default: claude-opus-5-5). Its answers are cached
-                  separately.
+                  separately. "dummy" calls no model at all and answers with
+                  placeholders, to test the pipeline for free.
   --web-searches <n>
                   Searches each analysis may run (default 10; 0 turns it off).
   --only <ids>    Only these measures, comma-separated, e.g.
