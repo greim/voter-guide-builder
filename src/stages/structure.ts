@@ -135,7 +135,7 @@ export async function structure(cache: Cache, pages: PageText[], { sourceUrl, on
  * model's, but the default model's are used when they exist, since they're
  * the ones verify has passed. The dummy model always uses its own.
  */
-async function cached<T>(cache: Cache, file: string, compute: () => Promise<T>): Promise<T> {
+export async function cached<T>(cache: Cache, file: string, compute: () => Promise<T>): Promise<T> {
   const parts = file.split('/');
   const useDefault = settings.model === defaultModel || (settings.model !== 'dummy' && (await cache.has(...parts)));
   if (useDefault) return cache.json(parts, compute);
@@ -192,12 +192,13 @@ function toMeasure(id: string, entry: Outline['measures'][number], reply: Measur
     caption: f.caption,
     section: f.section,
   }));
-  // Claude writes figure:N for the Nth figure; the page links assets/<id>.png.
+  // Claude writes ![caption](figure:N) for the Nth figure. The page shows the
+  // caption as bold text (the crop leaves it out) above assets/<id>.png.
   const sections = reply.sections.map(s => ({
     heading: s.heading,
-    markdown: s.markdown.replace(/\]\(figure:(\d+)\)/g, (all, n: string) => {
+    markdown: s.markdown.replace(/!\[([^\]]*)\]\(figure:(\d+)\)/g, (all, caption: string, n: string) => {
       const fig = figures[Number(n) - 1];
-      return fig ? `](assets/${fig.id}.png)` : all;
+      return fig ? `**${caption}**\n\n![${caption}](assets/${fig.id}.png)` : all;
     }),
   }));
   const optional = (s: string) => s.trim() || undefined;

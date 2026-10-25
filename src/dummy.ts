@@ -13,6 +13,7 @@ export function dummyJson(content: BetaContentBlockParam[], schema: Record<strin
   const properties = (schema.properties ?? {}) as Record<string, unknown>;
   if ('measures' in properties) return outline(content);
   if ('sections' in properties) return transcription(content);
+  if ('found' in properties) return figureBox(content);
   throw new Error('dummy model: no placeholder answer for this request');
 }
 
@@ -42,6 +43,16 @@ function outline(content: BetaContentBlockParam[]) {
   return { jurisdiction: 'Dummyland', election: '2099', measures };
 }
 
+/** A box over the middle of the page image. */
+function figureBox(content: BetaContentBlockParam[]) {
+  const block = content.find(b => b.type === 'image');
+  if (!block || block.type !== 'image' || block.source.type !== 'base64') throw new Error('dummy model: expected an image');
+  // A PNG's width and height are at bytes 16-23.
+  const png = Buffer.from(block.source.data, 'base64');
+  const [w, h] = [png.readUInt32BE(16), png.readUInt32BE(20)];
+  return { found: true, left: Math.round(w * 0.1), top: Math.round(h * 0.3), right: Math.round(w * 0.9), bottom: Math.round(h * 0.55) };
+}
+
 /** One section per page, made of that page's first lines. */
 function transcription(content: BetaContentBlockParam[]) {
   const block = content.find(b => b.type === 'document');
@@ -67,9 +78,11 @@ function transcription(content: BetaContentBlockParam[]) {
     const heading = lines[0]!;
     let markdown = lines.slice(1, 8).join(' ');
     // A placeholder figure on the first page, to exercise the figures stage.
+    // Its caption is the next line, since the page shows captions as text.
     if (i === 0) {
-      figures.push({ page: 1, caption: `Placeholder figure`, section: heading });
-      markdown += `\n\n![Placeholder figure](figure:1)`;
+      const caption = lines[8] ?? heading;
+      figures.push({ page: 1, caption, section: heading });
+      markdown += `\n\n![${caption}](figure:1)`;
     }
     sections.push({ heading, markdown });
   }

@@ -121,6 +121,10 @@ export function pdfBlock(bytes: Uint8Array): BetaContentBlockParam {
   };
 }
 
+export function imageBlock(png: Uint8Array): BetaContentBlockParam {
+  return { type: 'image', source: { type: 'base64', media_type: 'image/png', data: Buffer.from(png).toString('base64') } };
+}
+
 export function textBlock(text: string): BetaContentBlockParam {
   return { type: 'text', text };
 }

@@ -68,7 +68,7 @@ there. `--skip-verify` renders anyway.
 | 3 | structure | Claude: one call to find the measures, then one per measure on just its pages | `outline.json`, `measures/*.json`, then `guide.json` (see `src/schema.ts`) |
 | 4 | verify | code | `verify-report.txt`; stops on guide text that isn't in the booklet |
 | 5 | analyze | Claude with web search, one call per measure | `analyses/<prompt fingerprint>/*.md` |
-| 6 | figures | code | `figures/*.png` |
+| 6 | figures | Claude gives a rough box around each graphic on its page; code snaps it to what's drawn there, leaving out the caption, and renders it at 3x | `figures/<id>.json` (the box, in PDF points), `figures/<id>.png` |
 | 7 | render | code (`src/stages/render.ts`, `styles/main.css`) | `<out>/index.html`, `<out>/assets/` |
 | 8 | pdf | code (headless Chrome, using the page's print CSS) | `<out>/<out folder name>.pdf` |
 
@@ -104,5 +104,6 @@ on the Blue Book with the fixture. Save the Blue Book as
 
 ## Status
 
-Every stage but `figures` is built. Until it is, a run stops after analyze.
-Next: **figures**, compared with the fixture PNGs.
+Every stage is built. To fix a figure's crop, edit `figures/<id>.json` in the
+cache: change `rough` and re-run, or add `"exact": [x0, y0, x1, y1]` (PDF
+points, origin top left) to use that box as is.
