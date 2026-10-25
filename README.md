@@ -6,20 +6,30 @@ well in a browser, on a phone, and printed to PDF.
 ```
 npm install
 echo 'ANTHROPIC_API_KEY=sk-ant-...' > .env   # or export it in your shell
-npm run guide -- --pdf https://content.leg.colorado.gov/sites/default/files/2026-blue-book-en-accessible.pdf \
-                 --out ../greim.github.io/ballot-guides/colorado-2026
+npx voter-guide-builder interactive
 ```
 
-`--pdf` can also be a downloaded file; then pass `--source-url` so the guide
-links to the published booklet.
+`interactive` asks for each choice in turn (the booklet, the output folder,
+the model, and so on), shows the matching `generate` command, and runs it.
+`generate` takes the same choices as options, for repeat runs:
 
-To test the pipeline for free, pass `--model dummy`: no model is called, and
-placeholder answers of the right shape come back instantly (three made-up
-measures copied from the booklet's own lines, so verify still runs for real).
-For a cheap test run with a real model, combine `--model claude-haiku-5-5` (a much cheaper
-model), `--web-searches 0` and `--only amendment-81,proposition-nn`. Answers
-from another model are cached apart from the default model's, which are
-reused when present.
+```
+npx voter-guide-builder generate \
+  --pdf https://content.leg.colorado.gov/sites/default/files/2026-blue-book-en-accessible.pdf \
+  --out ../greim.github.io/ballot-guides/colorado-2026
+```
+
+Only `--pdf` and `--out` are required. `npx voter-guide-builder help generate`
+lists the rest. `--pdf` can also be a downloaded file; then pass
+`--source-url` so the guide links to the published booklet.
+
+To test the pipeline for free, pass `--model dummy` (or pick dummy in
+`interactive`): no model is called, and placeholder answers of the right shape
+come back instantly (three made-up measures copied from the booklet's own
+lines, so verify still runs for real). For a cheap test run with a real model,
+combine `--model claude-haiku-5-5` (a much cheaper model), `--web-searches 0`
+and `--only amendment-81,proposition-nn`. Answers from another model are
+cached apart from the default model's, which are reused when present.
 
 The analyses follow `prompts/analysis.md`. To use your own prompt without
 editing that file, pass `--analysis-prompt my-prompt.md`; it can use
@@ -62,7 +72,8 @@ stylesheet, linked as `../main.css` from each guide folder.
 ## Layout
 
 ```
-src/            pipeline code (cli.ts runs the stages)
+bin/            the voter-guide-builder command
+src/            pipeline code (cli.ts parses the command, pipeline.ts runs the stages)
 scripts/        fixture tools (see below)
 prompts/        prompts sent to Claude
 styles/         main.css, copied into the Pages repo on each run

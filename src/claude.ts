@@ -17,6 +17,14 @@ export const defaultModel = 'claude-opus-5-5';
  */
 export const settings = { model: defaultModel };
 
+/** The models offered by `interactive`, most to least expensive. --model takes any model id. */
+export const models = [
+  { id: 'claude-opus-5-5', description: 'the best analyses; costs the most' },
+  { id: 'claude-sonnet-5-5', description: 'good analyses for less' },
+  { id: 'claude-haiku-5-5', description: 'cheapest; for test runs' },
+  { id: 'dummy', description: 'free; no AI calls, placeholder answers' },
+];
+
 // Haiku has no server-side refusal fallback and only the basic web search tool.
 const isHaiku = () => settings.model.startsWith('claude-haiku');
 const fallbacks = () =>
