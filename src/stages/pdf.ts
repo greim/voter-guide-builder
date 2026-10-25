@@ -18,6 +18,9 @@ export async function printPdf(outDir: string): Promise<string> {
       format: 'Letter',
       margin: { top: '0.4in', right: '0.4in', bottom: '0.4in', left: '0.4in' },
       preferCSSPageSize: true,
+      // Like "Background graphics" in Chrome's print dialog: the heading icons
+      // and YES/NO boxes are CSS backgrounds.
+      printBackground: true,
     });
   } finally {
     await browser.close();
