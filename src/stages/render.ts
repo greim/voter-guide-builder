@@ -108,11 +108,13 @@ ${analysisBody.join('\n')}
 function measureSection(m: Measure, md: Markdown, toc: TocEntry, hasAnalysis: boolean): string {
   const parts: string[] = [];
   parts.push(`<h2 id="${m.id}">${esc(m.label)}: <span class="subheading">${esc(m.title)}</span></h2>`);
+  if (m.voteThreshold) parts.push(`<p class="vote-threshold">${md.inline(m.voteThreshold)}</p>`);
 
   if (m.ballotTitle) {
     const id = md.ids.take(`${m.id}-ballot-title`);
     toc.children.push({ id, text: 'Ballot Title', children: [] });
-    parts.push(`<h3 id="${id}">Ballot Title</h3>`, `<p>${md.inline(m.ballotTitle)}</p>`);
+    // Block, not inline: some ballot titles include lists or a table.
+    parts.push(`<h3 id="${id}">Ballot Title</h3>`, md.block(m.ballotTitle));
   }
   if (m.summary) parts.push(md.block(m.summary));
   if (hasAnalysis) {

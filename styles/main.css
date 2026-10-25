@@ -211,6 +211,15 @@ div#main h2 span.subheading {
   color: var(--color-text-muted);
 }
 
+/* e.g. "Passes with 55 percent of the vote", lined up with the heading text */
+p.vote-threshold {
+  margin-top: -.5rem;
+  padding-left: calc(1rem + var(--icon-size));
+  font-size: 90%;
+  font-style: italic;
+  color: var(--color-text-muted);
+}
+
 /* ==========================================================================
    "What your vote means" YES/NO boxes
    ========================================================================== */
@@ -362,7 +371,8 @@ div#main h2 span.subheading {
       --tag-size: 4rem;
     }
 
-    div#main h2 {
+    div#main h2,
+    p.vote-threshold {
       padding-left: 0;
     }
 
