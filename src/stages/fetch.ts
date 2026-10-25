@@ -7,14 +7,22 @@ import { Cache } from '../cache.ts';
 // cache by their hash so a re-published booklet never reuses stale results.
 
 export async function fetchBooklet(source: string, cacheRoot: string): Promise<Cache> {
-  const bytes = /^https?:\/\//.test(source) ? await download(source) : await readFile(source);
-  const hash = createHash('sha256').update(bytes).digest('hex').slice(0, 16);
+  const bytes = await readBooklet(source);
+  const hash = hashOf(bytes);
   const cache = new Cache(join(cacheRoot, hash));
   if (!(await cache.has('booklet.pdf'))) {
     await cache.writeText(bytes, 'booklet.pdf');
     await cache.writeJson({ source, fetchedAt: new Date().toISOString() }, 'source.json');
   }
   return cache;
+}
+
+export async function readBooklet(source: string): Promise<Uint8Array> {
+  return /^https?:\/\//.test(source) ? download(source) : readFile(source);
+}
+
+export function hashOf(bytes: Uint8Array): string {
+  return createHash('sha256').update(bytes).digest('hex').slice(0, 16);
 }
 
 async function download(url: string): Promise<Uint8Array> {

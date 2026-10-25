@@ -3,7 +3,7 @@ import { basename, extname, join } from 'node:path';
 import { checkbox, confirm, input, number, password, select } from '@inquirer/prompts';
 import { defaultModel, models } from './claude.ts';
 import type { RunOptions } from './pipeline.ts';
-import { fetchBooklet } from './stages/fetch.ts';
+import { fetchBooklet, hashOf, readBooklet } from './stages/fetch.ts';
 import { slug } from './stages/render.ts';
 
 // The `interactive` command: asks for each of generate's options, then shows the
@@ -24,12 +24,7 @@ async function ask(): Promise<RunOptions> {
     required: true,
     validate: v => isUrl(v) || existsSync(v) || 'No such file.',
   });
-  const sourceUrl = isUrl(pdf)
-    ? undefined
-    : (await input({
-        message: "The booklet's public URL, linked from the guide (optional):",
-        validate: v => !v || isUrl(v) || 'Enter a URL starting with http:// or https://.',
-      })) || undefined;
+  const sourceUrl = isUrl(pdf) ? undefined : await askSourceUrl(pdf);
   const name = basename(isUrl(pdf) ? new URL(pdf).pathname : pdf, extname(pdf));
   const out = await input({ message: 'Folder to write the guide into:', default: join('out', slug(name) || 'guide'), required: true });
   const cache = await input({ message: 'Folder for cached stage outputs:', default: 'cache', required: true });
@@ -74,6 +69,36 @@ async function ask(): Promise<RunOptions> {
   console.log(`\nThe same run without the questions:\n\n  ${generateCommand(o)}\n`);
   if (!(await confirm({ message: 'Run it now?', default: true }))) process.exit(0);
   return o;
+}
+
+/** The public URL of a local booklet, checked to be the same file. */
+async function askSourceUrl(pdf: string): Promise<string | undefined> {
+  const local = hashOf(await readBooklet(pdf));
+  for (;;) {
+    const url = await input({
+      message: "The booklet's public URL, linked from the guide (optional):",
+      validate: v => !v || isUrl(v) || 'Enter a URL starting with http:// or https://.',
+    });
+    if (!url) return undefined;
+
+    let problem: string;
+    try {
+      if (hashOf(await readBooklet(url)) === local) return url;
+      problem = `The PDF at that URL isn't the same file as ${pdf}.`;
+    } catch (err) {
+      problem = `Couldn't download it to check that it's the same file (${(err as Error).message}).`;
+    }
+    const next = await select({
+      message: problem,
+      choices: [
+        { name: 'Enter a different URL', value: 'retry' },
+        { name: 'Link to it anyway', value: 'use' },
+        { name: 'Stop', value: 'stop' },
+      ],
+    });
+    if (next === 'use') return url;
+    if (next === 'stop') process.exit(1);
+  }
 }
 
 /**

@@ -12,7 +12,8 @@ npx voter-guide-builder interactive
 `interactive` asks for each choice in turn (the booklet, the output folder,
 the model, and so on), shows the matching `generate` command, and runs it. It
 also confirms which API key to use (showing only its last characters), or asks
-for one if none is set; a typed key is used for that run only.
+for one if none is set; a typed key is used for that run only. Given a local
+PDF, it asks for the public URL and downloads it to check it's the same file.
 `generate` takes the same choices as options, for repeat runs:
 
 ```
