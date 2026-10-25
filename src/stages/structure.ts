@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import * as mupdf from 'mupdf';
 import type { Cache } from '../cache.ts';
-import { askJson, mapLimit, pdfBlock, textBlock } from '../claude.ts';
+import { askJson, defaultModel, mapLimit, pdfBlock, settings, textBlock } from '../claude.ts';
 import { prompt } from '../prompts.ts';
 import type { FigureRef, Guide, Measure, Section } from '../schema.ts';
 import { slug } from './render.ts';
@@ -89,15 +89,29 @@ const measureSchema = {
   },
 };
 
-/** `sourceUrl` is where readers can get the booklet; defaults to the URL it was fetched from. */
-export async function structure(cache: Cache, pages: PageText[], sourceUrl?: string): Promise<Guide> {
-  const outline = await cache.json(['outline.json'], () => findMeasures(pages));
+export interface StructureOptions {
+  /** Where readers can get the booklet; defaults to the URL it was fetched from. */
+  sourceUrl?: string;
+  /** Measure ids to keep (e.g. "amendment-81"); the rest are skipped. */
+  only?: string[];
+}
+
+export async function structure(cache: Cache, pages: PageText[], { sourceUrl, only }: StructureOptions = {}): Promise<Guide> {
+  const outline = await cached(cache, 'outline.json', () => findMeasures(pages));
   checkOutline(outline, pages.length);
 
+  let entries = outline.measures;
+  if (only) {
+    const ids = entries.map(e => slug(e.label));
+    const unknown = only.filter(id => !ids.includes(id));
+    if (unknown.length) throw new Error(`--only: no measure ${unknown.join(', ')}. The measures are ${ids.join(', ')}`);
+    entries = entries.filter(e => only.includes(slug(e.label)));
+  }
+
   const booklet = new mupdf.PDFDocument(await readFile(cache.path('booklet.pdf')));
-  const measures = await mapLimit(outline.measures, 4, async entry => {
+  const measures = await mapLimit(entries, 4, async entry => {
     const id = slug(entry.label);
-    const reply = await cache.json(['measures', `${id}.json`], async () => {
+    const reply = await cached(cache, `measures/${id}.json`, async () => {
       console.log(`      ${entry.label}: pages ${pageList(entry.pages)}`);
       return transcribe(booklet, entry);
     });
@@ -114,6 +128,17 @@ export async function structure(cache: Cache, pages: PageText[], sourceUrl?: str
   };
   await cache.writeJson(guide, 'guide.json');
   return guide;
+}
+
+/**
+ * Answers from another model (--model) are cached apart from the default
+ * model's, but the default model's are used when they exist, since they're
+ * the ones verify has passed.
+ */
+async function cached<T>(cache: Cache, file: string, compute: () => Promise<T>): Promise<T> {
+  const parts = file.split('/');
+  if (settings.model === defaultModel || (await cache.has(...parts))) return cache.json(parts, compute);
+  return cache.json(['by-model', settings.model, ...parts], compute);
 }
 
 async function findMeasures(pages: PageText[]): Promise<Outline> {

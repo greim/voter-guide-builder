@@ -8,7 +8,19 @@ import type {
 // The one place the pipeline talks to Claude. Credentials come from the
 // environment (ANTHROPIC_API_KEY, or a profile from `ant auth login`).
 
-export const model = 'claude-opus-5-5';
+export const defaultModel = 'claude-opus-5-5';
+
+/** Set from --model; a cheaper model (e.g. claude-haiku-5-5) makes test runs cheap. */
+export const settings = { model: defaultModel };
+
+// Haiku has no server-side refusal fallback and only the basic web search tool.
+const isHaiku = () => settings.model.startsWith('claude-haiku');
+const fallbacks = () =>
+  isHaiku() ? {} : { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' as const };
+const webSearchTool = (maxUses: number) =>
+  isHaiku()
+    ? { type: 'web_search_20250305' as const, name: 'web_search' as const, max_uses: maxUses }
+    : { type: 'web_search_20260209' as const, name: 'web_search' as const, max_uses: maxUses };
 
 let client: Anthropic | undefined;
 
@@ -25,12 +37,11 @@ export interface JsonRequest {
 export async function askJson<T>({ name, content, schema, effort = 'high' }: JsonRequest): Promise<T> {
   client ??= new Anthropic();
   const stream = client.beta.messages.stream({
-    model,
+    model: settings.model,
     max_tokens: 64000,
     // If a safety classifier declines, the server retries on a fallback model
     // instead of failing the run.
-    betas: ['server-side-fallback-2026-07-01'],
-    fallbacks: 'default',
+    ...fallbacks(),
     output_config: { effort, format: { type: 'json_schema', schema } },
     messages: [{ role: 'user', content }],
   });
@@ -66,12 +77,11 @@ export async function askText({ name, content, webSearches = 0, effort = 'high' 
   for (let rounds = 0; ; rounds++) {
     message = await client.beta.messages
       .stream({
-        model,
+        model: settings.model,
         max_tokens: 64000,
-        betas: ['server-side-fallback-2026-07-01'],
-        fallbacks: 'default',
+        ...fallbacks(),
         output_config: { effort },
-        tools: webSearches ? [{ type: 'web_search_20260209', name: 'web_search', max_uses: webSearches }] : undefined,
+        tools: webSearches ? [webSearchTool(webSearches)] : undefined,
         messages,
       })
       .finalMessage();

@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import type { Cache } from '../cache.ts';
-import { askText, mapLimit, model, textBlock } from '../claude.ts';
+import { askText, mapLimit, settings, textBlock } from '../claude.ts';
 import { fill, loadPrompt } from '../prompts.ts';
 import type { Analysis, Guide, Measure } from '../schema.ts';
 
@@ -9,10 +9,8 @@ import type { Analysis, Guide, Measure } from '../schema.ts';
 // prompt (prompts/analysis.md unless --analysis-prompt names another file).
 // The prompt is shown on the page; prompts/analysis-format.md adds the page's
 // formatting needs and isn't. Analyses are cached under a fingerprint of both
-// prompts and the model, so changing any of them writes fresh ones.
-
-/** Searches each analysis may run. */
-const webSearches = 10;
+// prompts, the model and the search limit, so changing any of them writes
+// fresh ones.
 
 export interface AnalysisPrompt {
   /** The prompt template, with {{jurisdiction}}, {{election}} and {{measure}}. */
@@ -24,8 +22,12 @@ export async function analysisPrompt(file = 'analysis'): Promise<AnalysisPrompt>
   return { template: await loadPrompt(file), format: await loadPrompt('analysis-format') };
 }
 
-export async function analyze(cache: Cache, guide: Guide, p: AnalysisPrompt): Promise<Analysis[]> {
-  const key = createHash('sha256').update(`${model}\n${p.template}\n${p.format}`).digest('hex').slice(0, 12);
+/** `webSearches`: how many searches each analysis may run; 0 turns search off. */
+export async function analyze(cache: Cache, guide: Guide, p: AnalysisPrompt, webSearches = 10): Promise<Analysis[]> {
+  const key = createHash('sha256')
+    .update(`${settings.model}\n${webSearches}\n${p.template}\n${p.format}`)
+    .digest('hex')
+    .slice(0, 12);
   if (!(await cache.has('analyses', key, 'prompt.md'))) {
     await cache.writeText(`${p.template}\n\n---\n\n${p.format}\n`, 'analyses', key, 'prompt.md');
   }

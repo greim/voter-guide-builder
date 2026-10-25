@@ -13,6 +13,11 @@ npm run guide -- --pdf https://content.leg.colorado.gov/sites/default/files/2026
 `--pdf` can also be a downloaded file; then pass `--source-url` so the guide
 links to the published booklet.
 
+For a cheap test run, combine `--model claude-haiku-5-5` (a much cheaper
+model), `--web-searches 0` and `--only amendment-81,proposition-nn`. Answers
+from another model are cached apart from the default model's, which are
+reused when present.
+
 The analyses follow `prompts/analysis.md`. To use your own prompt without
 editing that file, pass `--analysis-prompt my-prompt.md`; it can use
 `{{jurisdiction}}`, `{{election}}` and `{{measure}}`, and the guide quotes it
