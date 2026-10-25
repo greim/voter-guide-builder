@@ -13,6 +13,13 @@ npm run guide -- --pdf https://content.leg.colorado.gov/sites/default/files/2026
 `--pdf` can also be a downloaded file; then pass `--source-url` so the guide
 links to the published booklet.
 
+The analyses follow `prompts/analysis.md`. To use your own prompt without
+editing that file, pass `--analysis-prompt my-prompt.md`; it can use
+`{{jurisdiction}}`, `{{election}}` and `{{measure}}`, and the guide quotes it
+above the analyses. `prompts/analysis-format.md` adds what the page needs
+(Markdown sections, a Sources list) and isn't shown. Analyses are cached under
+a fingerprint of both prompts, so changing either writes new ones.
+
 Then open the output's `index.html`, review, and commit and push the Pages repo.
 The guide appears at `https://greim.github.io/ballot-guides/colorado-2026/`.
 
@@ -36,7 +43,7 @@ there. `--skip-verify` renders anyway.
 | 2 | extract | code (mupdf) | `pages.json`: text and image positions per page |
 | 3 | structure | Claude: one call to find the measures, then one per measure on just its pages | `outline.json`, `measures/*.json`, then `guide.json` (see `src/schema.ts`) |
 | 4 | verify | code | `verify-report.txt`; stops on guide text that isn't in the booklet |
-| 5 | analyze | Claude, one call per measure, `prompts/analysis.md` | `analyses/*.md` |
+| 5 | analyze | Claude with web search, one call per measure | `analyses/<prompt fingerprint>/*.md` |
 | 6 | figures | code | `figures/*.png` |
 | 7 | render | code (`src/stages/render.ts`, `styles/main.css`) | `<out>/index.html`, `<out>/assets/` |
 
@@ -70,8 +77,5 @@ on the Blue Book with the fixture. Save the Blue Book as
 
 ## Status
 
-`fetch`, `extract`, `structure`, `verify` and `render` are built; structure
-hasn't had a real run yet. Next, in order:
-
-1. **analyze**: compare tone and length with `fixtures/colorado-2026/analyses/`
-2. **figures**: compare with the fixture PNGs
+Every stage but `figures` is built. Until it is, a run stops after analyze.
+Next: **figures**, compared with the fixture PNGs.

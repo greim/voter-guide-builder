@@ -5,7 +5,8 @@ import { fetchBooklet } from './stages/fetch.ts';
 import { render } from './stages/render.ts';
 import { extract } from './stages/extract.ts';
 import { structure } from './stages/structure.ts';
-import { analyze, figures } from './stages/todo.ts';
+import { analysisPrompt, analyze } from './stages/analyze.ts';
+import { figures } from './stages/todo.ts';
 import { verify } from './stages/verify.ts';
 
 const usage = `Usage: npm run guide -- --pdf <url-or-path> --out <folder>
@@ -16,7 +17,11 @@ const usage = `Usage: npm run guide -- --pdf <url-or-path> --out <folder>
   --cache  Where stage outputs are kept between runs (default: cache)
   --source-url    The booklet's public URL, linked from the guide. Defaults
                   to --pdf when that's a URL.
-  --skip-verify   Render even if verify finds text that isn't in the booklet.`;
+  --skip-verify   Render even if verify finds text that isn't in the booklet.
+  --analysis-prompt <file>
+                  Your own analysis prompt instead of prompts/analysis.md.
+                  It can use {{jurisdiction}}, {{election}} and {{measure}},
+                  and is quoted on the page above the analyses.`;
 
 // Settings such as ANTHROPIC_API_KEY can live in a git-ignored .env file.
 if (existsSync('.env')) process.loadEnvFile('.env');
@@ -28,6 +33,7 @@ const { values } = parseArgs({
     cache: { type: 'string', default: 'cache' },
     'source-url': { type: 'string' },
     'skip-verify': { type: 'boolean' },
+    'analysis-prompt': { type: 'string' },
     help: { type: 'boolean', short: 'h' },
   },
 });
@@ -64,11 +70,11 @@ async function run(pdf: string, out: string) {
     console.warn(`      ${(err as Error).message}`);
   }
   step(5, 'analyze');
-  const analyses = await analyze(cache, guide);
+  const prompt = await analysisPrompt(values['analysis-prompt']);
+  const analyses = await analyze(cache, guide, prompt);
   step(6, 'figures');
   await figures(cache, guide);
   step(7, 'render');
-  const analysisPrompt = await analysisPromptForPage(guide);
-  await render({ guide, analyses, analysisPrompt, figuresDir: cache.path('figures') }, out);
+  await render({ guide, analyses, analysisPrompt: analysisPromptForPage(guide, prompt.template), figuresDir: cache.path('figures') }, out);
   console.log(`Done. Open ${out}/index.html to review.`);
 }
