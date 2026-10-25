@@ -123,8 +123,9 @@ function intro(guide: Guide, hasAnalyses: boolean): string {
   if (!hasAnalyses) return `This page has the summary of each measure presented in the ${booklet}, in one place.`;
   return (
     `This page gives you additional background and context for each measure presented in the ${booklet}. ` +
-    `Official summaries from the booklet are listed first, followed by AI-written analyses of each, ` +
-    `to help you cast an informed vote.`
+    `Official summaries from the booklet are listed first, followed by AI-written analyses. ` +
+    `For full transparency, <a href="#analyses">the prompt</a> used to generate the analyses is included below, ` +
+    `so you can cast an informed vote.`
   );
 }
 
