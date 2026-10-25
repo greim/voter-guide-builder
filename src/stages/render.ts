@@ -2,7 +2,7 @@ import { copyFile, mkdir, readdir, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { Marked, type Tokens } from 'marked';
 import { markedSmartypants } from 'marked-smartypants';
-import type { Analysis, Measure, RenderInput, Section } from '../schema.ts';
+import type { Analysis, Guide, Measure, RenderInput, Section } from '../schema.ts';
 
 // Stage 7: the guide as one static HTML page. No AI here: everything that was
 // hand-tuned on the Colorado 2026 page lives in this file and styles/main.css.
@@ -72,6 +72,9 @@ export function renderHtml({ guide, analyses, analysisPrompt, analysisSettings }
 </head>
 
 <body>
+  <p id="intro">
+    ${intro(guide, analysisBody.length > 0)}
+  </p>
   <nav id="toc" role="doc-toc">
     <h1>Table of Contents</h1>
     <h2><a href="#summaries">Official Summaries</a></h2>
@@ -112,6 +115,18 @@ ${analysisBody.join('\n')}
 
 </html>
 `;
+}
+
+/** What a visitor is looking at, in a few lines. */
+function intro(guide: Guide, hasAnalyses: boolean): string {
+  const booklet = `<a href="${esc(guide.sourceUrl)}">${esc(guide.jurisdiction)} ${esc(guide.election)} ballot information booklet</a>`;
+  if (!hasAnalyses) return `This page has the official summaries of each measure from the ${booklet}, in one place.`;
+  return (
+    `<strong>What this is:</strong> the official summaries from the ${booklet}, ` +
+    `plus an analysis of each measure written by Claude, an AI model. ` +
+    `The booklet tells you what a measure does. The analysis adds what it leaves out: background, context, and likely real-world effects. ` +
+    `Read it as a second opinion, not a verdict.`
+  );
 }
 
 function measureSection(m: Measure, md: Markdown, toc: TocEntry, hasAnalysis: boolean): string {
