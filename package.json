@@ -24,6 +24,7 @@
     "marked": "^18.1.1",
     "marked-smartypants": "^1.1.12",
     "mupdf": "^1.28.1",
+    "playwright-core": "^1.63.0",
     "tsx": "^4.23.15"
   },
   "devDependencies": {

@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { analysisPromptForPage } from '../src/prompts.ts';
 import { analysisPrompt as loadAnalysisPrompt } from '../src/stages/analyze.ts';
 import type { Analysis, Guide } from '../src/schema.ts';
+import { printPdf } from '../src/stages/pdf.ts';
 import { render } from '../src/stages/render.ts';
 
 const dir = join(import.meta.dirname, '..', 'fixtures', 'colorado-2026');
@@ -19,4 +20,4 @@ for (const file of (await readdir(join(dir, 'analyses'))).sort()) {
 const analysisPrompt = analysisPromptForPage(guide, (await loadAnalysisPrompt()).template);
 
 await render({ guide, analyses, analysisPrompt, figuresDir: dir }, outDir);
-console.log(`Wrote ${join(outDir, 'index.html')}`);
+console.log(`Wrote ${join(outDir, 'index.html')} and ${await printPdf(outDir)}`);

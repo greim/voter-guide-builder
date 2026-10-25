@@ -7,6 +7,7 @@ import { structure } from './stages/structure.ts';
 import { analysisPrompt, analyze } from './stages/analyze.ts';
 import { figures } from './stages/todo.ts';
 import { verify } from './stages/verify.ts';
+import { printPdf } from './stages/pdf.ts';
 
 /** Everything a run needs; `generate` takes these as options and `interactive` asks for them. */
 export interface RunOptions {
@@ -21,7 +22,7 @@ export interface RunOptions {
   only?: string[];
 }
 
-const step = (n: number, name: string) => console.log(`[${n}/7] ${name}`);
+const step = (n: number, name: string) => console.log(`[${n}/8] ${name}`);
 
 export async function run(o: RunOptions): Promise<void> {
   settings.model = o.model;
@@ -49,5 +50,7 @@ export async function run(o: RunOptions): Promise<void> {
   await figures(cache, guide);
   step(7, 'render');
   await render({ guide, analyses, analysisPrompt: analysisPromptForPage(guide, prompt.template), figuresDir: cache.path('figures') }, o.out);
-  console.log(`Done. Open ${o.out}/index.html to review.`);
+  step(8, 'pdf');
+  const pdf = await printPdf(o.out);
+  console.log(`Done. Open ${o.out}/index.html and ${pdf} to review.`);
 }

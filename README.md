@@ -41,10 +41,13 @@ above the analyses. `prompts/analysis-format.md` adds what the page needs
 (Markdown sections, a Sources list) and isn't shown. Analyses are cached under
 a fingerprint of both prompts, so changing either writes new ones.
 
-Then open the output's `index.html`, review, and commit and push the Pages repo.
+Then open the output's `index.html` and PDF, review, and commit and push the Pages repo.
 The guide appears at `https://greim.github.io/ballot-guides/colorado-2026/`.
 
 ## How it works
+
+The PDF step prints the page with your installed Google Chrome. Without
+Chrome, run `npx playwright install chromium` once and it uses that instead.
 
 Code runs every stage in order; Claude is called only where judgment is needed.
 Each stage writes to `cache/<pdf-hash>/` and is skipped when its output exists,
@@ -67,6 +70,7 @@ there. `--skip-verify` renders anyway.
 | 5 | analyze | Claude with web search, one call per measure | `analyses/<prompt fingerprint>/*.md` |
 | 6 | figures | code | `figures/*.png` |
 | 7 | render | code (`src/stages/render.ts`, `styles/main.css`) | `<out>/index.html`, `<out>/assets/` |
+| 8 | pdf | code (headless Chrome, using the page's print CSS) | `<out>/<out folder name>.pdf` |
 
 `src/schema.ts` is state-neutral: booklet sections are Markdown, and special
 pieces like the YES/NO boxes are optional typed fields. Guides share one
@@ -91,8 +95,9 @@ out/            scratch output (git-ignored)
 `fixtures/colorado-2026/` holds the hand-made 2026 page (`guide.html`) and the
 Markdown it came from. `npm run fixture` turns that Markdown into `guide.json`
 and `analyses/*.md`, the data the later stages should produce.
-`npm run render-fixture -- out/colorado-2026` renders that data, so the render
-stage can be checked against `guide.html` without calling Claude.
+`npm run render-fixture -- out/colorado-2026` renders that data, and its PDF, so
+the render and pdf stages can be checked against `guide.html` without calling
+Claude.
 `npm run compare-fixture -- cache/<hash>/guide.json` compares a structure run
 on the Blue Book with the fixture. Save the Blue Book as
 `fixtures/colorado-2026/blue-book.pdf` (git-ignored).
