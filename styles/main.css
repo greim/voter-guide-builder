@@ -46,6 +46,11 @@ img {
   max-width: 100%;
 }
 
+/* Long URLs shown as link text would otherwise widen the page on phones */
+div#main a {
+  overflow-wrap: anywhere;
+}
+
 p,
 ol,
 ul,
@@ -182,13 +187,27 @@ p#intro:has(+ p#download) {
 
 p#download {
   padding-bottom: 1rem;
+  font-style: italic;
+}
+
+/* An arrow into a tray, drawn in the link's color */
+p#download a::before {
+  content: "";
+  display: inline-block;
+  width: .9em;
+  height: .9em;
+  margin-right: .35em;
+  vertical-align: -.1em;
+  background-color: currentColor;
+  opacity: .7;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3v12M7 10l5 5 5-5M4 17v3h16v-3'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 
 /* Source code link at the foot of the page */
 div#main footer {
   margin-top: 3rem;
   padding-top: 1rem;
-  border-top: 1px solid var(--color-rule);
+  border-top: .2rem solid var(--color-rule);
   color: var(--color-text-muted);
   font-size: 90%;
 }
@@ -337,6 +356,11 @@ p.vote-threshold {
     margin-top: 2rem;
     border-top: .2rem solid var(--color-rule);
   }
+
+  /* Its first line's top level with the top of the sidebar's heading */
+  p#intro {
+    margin-top: 1.95rem;
+  }
 }
 
 /* ==========================================================================
@@ -367,6 +391,10 @@ p.vote-threshold {
   @media (max-width: 700px) {
     body {
       padding-left: 1.5rem;
+    }
+
+    p#intro {
+      margin-top: 1rem;
     }
 
     nav#toc {
