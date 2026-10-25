@@ -171,6 +171,7 @@ nav#toc>ul ul {
    TOC on phones and in print */
 p#intro {
   padding-bottom: 1rem;
+  font-style: italic;
   border-bottom: 1px solid var(--color-rule);
   font-size: 110%;
 }
