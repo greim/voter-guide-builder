@@ -181,6 +181,17 @@ class Markdown {
     // Curly quotes, dashes and ellipses, as the hand-made page had.
     this.marked.use(markedSmartypants());
     this.marked.use({
+      tokenizer: {
+        // GFM also strikes through ~single tildes~, but analyses use "~" to
+        // mean "about" (~$159,000), so only ~~double~~ strikes through.
+        del(src) {
+          const match = /^~~(?=\S)([\s\S]*?\S)~~(?!~)/.exec(src);
+          if (match) return { type: 'del', raw: match[0], text: match[1]!, tokens: this.lexer.inlineTokens(match[1]!) };
+          // A plain-text token in place of a del one; marked accepts either here.
+          if (src.startsWith('~')) return { type: 'text', raw: '~', text: '~' } as unknown as Tokens.Del;
+          return undefined;
+        },
+      },
       walkTokens(token) {
         // Markdown sections start at ##; on the page, measures are h2 and sections h3.
         if (token.type === 'heading') token.depth = Math.min(token.depth + 1, 6);
