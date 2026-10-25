@@ -56,7 +56,8 @@ function research(webSearches: number): string {
 /** The measure as the guide shows it, as one Markdown document. */
 export function officialText(m: Measure): string {
   const parts = [`# ${m.label}: ${m.title}`];
-  if (m.voteThreshold) parts.push(m.voteThreshold);
+  // Labeled, or Claude may read "Passes with 55%" as a result and explain it.
+  if (m.voteThreshold) parts.push(`Vote needed to pass: ${m.voteThreshold}`);
   if (m.ballotTitle) parts.push('## Ballot Title', m.ballotTitle);
   if (m.summary) parts.push(m.summary);
   if (m.voteMeaning) parts.push('## What Your Vote Means', m.voteMeaning.yes, m.voteMeaning.no);
