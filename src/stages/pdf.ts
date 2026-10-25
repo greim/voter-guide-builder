@@ -5,9 +5,14 @@ import { chromium, type Browser } from 'playwright-core';
 // Stage 8: the rendered page printed to PDF by headless Chrome, using the
 // page's print CSS, the same as printing it from Chrome by hand.
 
-/** Writes <out>/<out folder name>.pdf and returns its path. */
+/** Where printPdf writes the PDF: <out>/<out folder name>.pdf. */
+export function pdfPath(outDir: string): string {
+  return join(outDir, `${basename(resolve(outDir))}.pdf`);
+}
+
+/** Writes the PDF to pdfPath(outDir) and returns its path. */
 export async function printPdf(outDir: string): Promise<string> {
-  const file = join(outDir, `${basename(resolve(outDir))}.pdf`);
+  const file = pdfPath(outDir);
   const browser = await launch();
   try {
     const page = await browser.newPage();

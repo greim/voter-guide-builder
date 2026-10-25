@@ -1,8 +1,9 @@
 import { copyFile, mkdir, readdir, writeFile } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { Marked, type Tokens } from 'marked';
 import { markedSmartypants } from 'marked-smartypants';
 import type { Analysis, Guide, Measure, RenderInput, Section } from '../schema.ts';
+import { pdfPath } from './pdf.ts';
 
 // Stage 7: the guide as one static HTML page. No AI here: everything that was
 // hand-tuned on the Colorado 2026 page lives in this file and styles/main.css.
@@ -19,7 +20,7 @@ const sourceCode = 'https://github.com/greim/voter-guide-builder';
 const repoRoot = join(import.meta.dirname, '..', '..');
 
 export async function render(input: RenderInput, outDir: string): Promise<void> {
-  const html = renderHtml(input);
+  const html = renderHtml(input, basename(pdfPath(outDir)));
   await mkdir(join(outDir, 'assets'), { recursive: true });
   await writeFile(join(outDir, 'index.html'), html);
 
@@ -41,7 +42,8 @@ interface TocEntry {
   children: TocEntry[];
 }
 
-export function renderHtml({ guide, analyses, analysisPrompt, analysisSettings }: RenderInput): string {
+/** `pdfFile` is the guide's PDF, next to index.html, linked under the intro. */
+export function renderHtml({ guide, analyses, analysisPrompt, analysisSettings }: RenderInput, pdfFile?: string): string {
   const md = new Markdown();
   const analysisFor = new Map(analyses.map(a => [a.measureId, a]));
 
@@ -74,7 +76,10 @@ export function renderHtml({ guide, analyses, analysisPrompt, analysisSettings }
 <body>
   <p id="intro">
     ${intro(guide, analysisBody.length > 0)}
-  </p>
+  </p>${pdfFile ? `
+  <p id="download">
+    <a href="${esc(pdfFile)}" download>Download as PDF</a>
+  </p>` : ''}
   <nav id="toc" role="doc-toc">
     <h1>Table of Contents</h1>
     <h2><a href="#summaries">Official Summaries</a></h2>

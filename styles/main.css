@@ -175,6 +175,15 @@ p#intro {
   font-size: 110%;
 }
 
+/* "Download as PDF", under the intro: it takes over the intro's space below */
+p#intro:has(+ p#download) {
+  padding-bottom: 0;
+}
+
+p#download {
+  padding-bottom: 1rem;
+}
+
 /* Source code link at the foot of the page */
 div#main footer {
   margin-top: 3rem;
@@ -410,6 +419,11 @@ p.vote-threshold {
 @media print {
   html {
     font-size: 11pt;
+  }
+
+  /* The PDF doesn't need a link to itself */
+  p#download {
+    display: none;
   }
 
   section {
