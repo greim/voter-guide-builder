@@ -122,9 +122,10 @@ function intro(guide: Guide, hasAnalyses: boolean): string {
   const booklet = `<a href="${esc(guide.sourceUrl)}">${esc(guide.jurisdiction)} ${esc(guide.election)} ballot information booklet</a>`;
   if (!hasAnalyses) return `This page has the official summaries of each measure from the ${booklet}, in one place.`;
   return (
-    `This page gives you more than the ${booklet}. ` +
-    `Along with the official summaries, it has an AI-written analysis of each measure ` +
-    `that fills in the background and context the booklet leaves out, so you can vote with a fuller picture.`
+    `The background and context the official ballot booklet leaves out, for every measure on the ` +
+    `${esc(guide.jurisdiction)} ${esc(guide.election)} ballot. ` +
+    `Each measure has an AI-written analysis to help you cast an informed vote, ` +
+    `alongside its official summary from the ${booklet}.`
   );
 }
 
