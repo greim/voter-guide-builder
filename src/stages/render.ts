@@ -119,13 +119,12 @@ ${analysisBody.join('\n')}
 
 /** What a visitor is looking at, in a few lines. */
 function intro(guide: Guide, hasAnalyses: boolean): string {
-  const booklet = `<a href="${esc(guide.sourceUrl)}">${esc(guide.jurisdiction)} ${esc(guide.election)} ballot information booklet</a>`;
-  if (!hasAnalyses) return `This page has the official summaries of each measure from the ${booklet}, in one place.`;
+  const booklet = `<a href="${esc(guide.sourceUrl)}">official ${esc(guide.jurisdiction)} ${esc(guide.election)} ballot booklet</a>`;
+  if (!hasAnalyses) return `This page has the summary of each measure presented in the ${booklet}, in one place.`;
   return (
-    `The background and context the official ballot booklet leaves out, for every measure on the ` +
-    `${esc(guide.jurisdiction)} ${esc(guide.election)} ballot. ` +
-    `Each measure has an AI-written analysis to help you cast an informed vote, ` +
-    `alongside its official summary from the ${booklet}.`
+    `This page gives you additional background and context for each measure presented in the ${booklet}. ` +
+    `Official summaries from the booklet are listed first, followed by AI-written analyses of each, ` +
+    `to help you cast an informed vote.`
   );
 }
 
