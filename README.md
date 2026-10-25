@@ -5,7 +5,7 @@ well in a browser, on a phone, and printed to PDF.
 
 ```
 npm install
-export ANTHROPIC_API_KEY=...
+echo 'ANTHROPIC_API_KEY=sk-ant-...' > .env   # or export it in your shell
 npm run guide -- --pdf https://content.leg.colorado.gov/sites/default/files/2026-blue-book-en-accessible.pdf \
                  --out ../greim.github.io/ballot-guides/colorado-2026
 ```

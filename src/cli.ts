@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { parseArgs } from 'node:util';
 import { analysisPromptForPage } from './prompts.ts';
 import { fetchBooklet } from './stages/fetch.ts';
@@ -16,6 +17,9 @@ const usage = `Usage: npm run guide -- --pdf <url-or-path> --out <folder>
   --source-url    The booklet's public URL, linked from the guide. Defaults
                   to --pdf when that's a URL.
   --skip-verify   Render even if verify finds text that isn't in the booklet.`;
+
+// Settings such as ANTHROPIC_API_KEY can live in a git-ignored .env file.
+if (existsSync('.env')) process.loadEnvFile('.env');
 
 const { values } = parseArgs({
   options: {
