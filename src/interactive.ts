@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import { basename, extname, join } from 'node:path';
-import { checkbox, confirm, input, number, select } from '@inquirer/prompts';
+import { checkbox, confirm, input, number, password, select } from '@inquirer/prompts';
 import { defaultModel, models } from './claude.ts';
 import type { RunOptions } from './pipeline.ts';
 import { fetchBooklet } from './stages/fetch.ts';
@@ -38,6 +38,7 @@ async function ask(): Promise<RunOptions> {
     choices: models.map(m => ({ name: `${m.id} (${m.description})`, value: m.id })),
     default: defaultModel,
   });
+  if (model !== 'dummy') await askApiKey();
   const webSearches =
     model === 'dummy'
       ? 10
@@ -73,6 +74,21 @@ async function ask(): Promise<RunOptions> {
   console.log(`\nThe same run without the questions:\n\n  ${generateCommand(o)}\n`);
   if (!(await confirm({ message: 'Run it now?', default: true }))) process.exit(0);
   return o;
+}
+
+/**
+ * Confirms the key from the environment (or .env), or asks for one. A typed
+ * key is used for this run only and isn't saved or shown.
+ */
+async function askApiKey(): Promise<void> {
+  const current = process.env.ANTHROPIC_API_KEY;
+  if (current && (await confirm({ message: `Use the API key ending in ...${current.slice(-6)}?`, default: true }))) return;
+  const key = await password({
+    message: 'Anthropic API key:',
+    mask: true,
+    validate: v => v.trim().length > 0 || 'Enter a key, or press Ctrl+C to stop.',
+  });
+  process.env.ANTHROPIC_API_KEY = key.trim();
 }
 
 /** The measures a previous run found in this booklet, or undefined before the first run. */
