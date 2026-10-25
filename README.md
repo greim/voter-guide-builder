@@ -19,7 +19,7 @@ PDF, it asks for the public URL and downloads it to check it's the same file.
 ```
 npx voter-guide-builder generate \
   --pdf https://content.leg.colorado.gov/sites/default/files/2026-blue-book-en-accessible.pdf \
-  --out ../greim.github.io/ballot-guides/colorado-2026
+  --out ../my-site/ballot-guides/colorado-2026
 ```
 
 Only `--pdf` and `--out` are required. `npx voter-guide-builder help generate`
@@ -41,8 +41,12 @@ above the analyses. `prompts/analysis-format.md` adds what the page needs
 (Markdown sections, a Sources list) and isn't shown. Analyses are cached under
 a fingerprint of both prompts, so changing either writes new ones.
 
-Then open the output's `index.html` and PDF, review, and commit and push the Pages repo.
-The guide appears at `https://greim.github.io/ballot-guides/colorado-2026/`.
+Then open the output's `index.html` and PDF and review them. The output is a
+static folder, so publishing is copying it to any web host. For example, with
+`--out` inside a GitHub Pages repo, commit and push that repo and the guide
+appears under its site, e.g. `https://<user>.github.io/ballot-guides/colorado-2026/`.
+The shared `main.css` and `icons/` are written to the folder above `--out`, so
+guides that sit side by side share them.
 
 ## How it works
 
@@ -83,7 +87,7 @@ bin/            the voter-guide-builder command
 src/            pipeline code (cli.ts parses the command, pipeline.ts runs the stages)
 scripts/        fixture tools (see below)
 prompts/        prompts sent to Claude
-styles/         main.css, copied into the Pages repo on each run
+styles/         main.css, copied next to the guide folders on each run
 assets/icons/   heading icons, copied next to main.css
 fixtures/       hand-made Colorado 2026 guide: the answer key for each stage
 cache/          stage outputs (git-ignored)
