@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Turns an official ballot-measure booklet PDF into a browsable, printable HTML voter guide.",
+  "license": "MIT",
   "type": "module",
   "bin": {
     "voter-guide-builder": "bin/voter-guide-builder.js"
